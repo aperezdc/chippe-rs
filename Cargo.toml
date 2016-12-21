@@ -1,0 +1,7 @@
+[package]
+authors = ["Adrian Perez de Castro <aperez@igalia.com>"]
+name = "chippers"
+version = "0.1.0"
+
+[dependencies]
+bitflags = "*"
