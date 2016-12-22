@@ -114,33 +114,6 @@ const FONTSET: [u8; 5 * 16] = [
 ];
 
 
-// X-ABC 8-bit random number generator
-#[derive(Default)]
-struct XAbcRng {
-    x: u8,
-    a: u8,
-    b: u8,
-    c: u8,
-}
-
-impl XAbcRng {
-    fn new() -> Self {
-        XAbcRng { ..Default::default() }
-    }
-
-    fn last(&self) -> u8 {
-        self.c
-    }
-
-    fn next(&mut self) -> u8  {
-        self.x += 51;
-        self.a ^= self.c ^ self.x;
-        self.b += self.a;
-        self.c += (self.b >> 1) ^ self.a;
-        self.c
-    }
-}
-
 
 type Opcode = u16;
 
@@ -699,7 +672,7 @@ pub struct Chip8 {
     keys: Keys,
     screen: Screen,
     redraw: bool,
-    random: XAbcRng,
+    random: ::rng::XAbcRng,
 }
 
 impl Chip8 {
