@@ -5,3 +5,7 @@ version = "0.1.0"
 
 [dependencies]
 bitflags = "*"
+
+[dependencies.nom]
+version = "*"
+#features = ["verbose-errors"]
