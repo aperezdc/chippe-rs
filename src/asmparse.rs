@@ -1,7 +1,7 @@
 use std::str::FromStr;
 use super::nom::*;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Copy, Clone)]
 pub enum Register {
     I,
     K,     // Pseudo register for "LD Vx, K"
@@ -15,10 +15,11 @@ pub enum Register {
 }
 
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Expression {
     Void,
     Addr(u16),  // 12-bit
+    Label(String),
     Byte(u8),
     Nibble(u8), //  4-bit
     Reg(Register),
@@ -40,7 +41,7 @@ impl Expression {
 }
 
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Instruction {
     // Fx1E  ADD  I, Vx
     // 7xkk  ADD  Vx, Byte
@@ -273,9 +274,11 @@ named!(parse_directive<Directive>,
 );
 
 named!(parse_label<&str>,
-    map_res!(ws!(do_parse!(
-        ident: take_while1!(is_alphabetic) >> tag!(":") >> (ident)
-    )), ::std::str::from_utf8)
+    map_res!(take_while1!(is_alphabetic), ::std::str::from_utf8)
+);
+
+named!(parse_label_def<&str>,
+    ws!(terminated!(parse_label, tag!(":")))
 );
 
 named!(parse_vreg<Register>,
@@ -343,7 +346,10 @@ named!(parse_i_add<Instruction>,
 
 // TODO: Parse labels.
 named!(parse_addr<Expression>,
-    map!(parse_word, Expression::Addr)
+    alt_complete!(
+        parse_word  => { Expression::Addr } |
+        parse_label => { |s| Expression::Label(String::from(s)) }
+    )
 );
 
 
@@ -616,21 +622,36 @@ named!(parse_instruction<Instruction>,
 );
 
 
+named!(parse_comment<()>,
+    do_parse!(
+        tag!(";") >> not_line_ending >> line_ending >>
+        (())
+    )
+);
+
+
 #[derive(Debug, PartialEq)]
-pub enum Line<'a> {
+pub enum Item<'a> {
     Lbl(&'a str),
     Dir(Directive),
     Ins(Instruction),
+    Comment,
 }
 
 
-named!(parse_line<Line>,
-    ws!(alt_complete!(
-        parse_instruction => { Line::Ins } |
-        parse_directive   => { Line::Dir } |
-        parse_label       => { Line::Lbl }
+named!(parse_item<Item>,
+    ws!(do_parse!(
+        item: alt_complete!(
+            parse_instruction => { Item::Ins } |
+            parse_directive   => { Item::Dir } |
+            parse_label_def   => { Item::Lbl } |
+            parse_comment     => { |_| Item::Comment }
+        ) >> (item)
     ))
 );
+
+
+named!(pub parse_program<Vec<Item>>, complete!(many1!(parse_item)));
 
 
 #[cfg(test)]
@@ -706,7 +727,36 @@ mod test {
                 Instruction::SHL(Register::V(0x4), Register::V(0)),
                 b"shl v4", b"SHL V4, v0");
 
-    parse_test!(parse_line_label, parse_line,
-                Line::Lbl("foobar"),
+    parse_test!(parse_item_label, parse_item,
+                Item::Lbl("foobar"),
                 b"  foobar : ", b"foobar:", b"foobar  :", b"foobar:  ");
+
+    parse_test!(parse_comment_line, parse_comment, (),
+                b";\n", b"; foo bar baz\n");
+
+    parse_test!(parse_program_1, parse_program,
+                vec![Item::Comment,
+                     Item::Lbl("main"),
+                     Item::Ins(Instruction::RET)],
+                b"; This is a comment
+                  main:
+                    ret
+                ");
+
+    parse_test!(parse_program_2, parse_program,
+                vec![Item::Lbl("loop"),
+                     Item::Ins(Instruction::JP(Expression::Void,
+                                               Expression::Label(String::from("loop"))))],
+                b"loop: jp loop");
+
+    parse_test!(parse_program_3, parse_program,
+                vec![Item::Dir(Directive::OPTION(AsmOption::BINARY)),
+                     Item::Lbl("loop"),
+                     Item::Ins(Instruction::JP(Expression::Void,
+                                               Expression::Label(String::from("loop"))))],
+                b"option binary
+
+loop:
+    jp loop
+");
 }

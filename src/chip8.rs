@@ -156,26 +156,30 @@ impl MemRange {
     fn contains(&self, addr: MemAddr) -> bool {
         self.lo <= addr && addr < self.hi
     }
+
     fn slice_from<'a>(&self, from: &'a mut [u8]) -> &'a mut [u8] {
         &mut from[self.lo.to_usize() .. self.hi.to_usize()]
     }
-    fn iter(&self) -> MemRangeIter {
-        MemRangeIter {
-            range: self,
-            offset: 0,
-        }
+
+    fn iter_bytes(&self) -> MemRangeIter {
+        MemRangeIter { range: self, offset: 0, step: 1 }
+    }
+
+    fn iter_words(&self) -> MemRangeIter {
+        MemRangeIter { range: self, offset: 0, step: 2 }
     }
 }
 
 struct MemRangeIter<'a> {
     range: &'a MemRange,
     offset: u16,
+    step: u16,
 }
 
 impl<'a> Iterator for MemRangeIter<'a> {
     type Item = MemAddr;
     fn next(&mut self) -> Option<MemAddr> {
-        self.offset += 1;
+        self.offset += self.step;
         if self.range.contains(self.range.lo + self.offset) {
             Some(self.range.lo + self.offset)
         } else {
@@ -693,9 +697,10 @@ impl Chip8 {
     }
 
     pub fn disassemble<T: Write>(&self, f: &mut T) -> IoResult<()> {
-        for addr in MEMMAP.program.iter() {
-            let op = Chip8::decode(self.mem.load(addr));
-            write!(f, "{}: {}\n", addr, op)?;
+        for addr in MEMMAP.program.iter_words() {
+            let op: Opcode = self.mem.load(addr);
+            write!(f, "{} [{:0>4X}]: ", addr, op)?;
+            write!(f, "{}\n", Chip8::decode(op))?;
         }
         Ok(())
     }
@@ -752,7 +757,7 @@ impl Chip8 {
                                            0x6 => XyOp::BitShr,
                                            0x7 => XyOp::NumSubY,
                                            0xE => XyOp::BitShl,
-                                           _   => panic!("illegal instruction: 0x{:X}", op),
+                                           _   => panic!("illegal instruction: {:X}", op),
                                        }),
                 0x9 => Instruction::SkipIf((op & 0x0F00 >> 8) as u8,
                                            (op & 0x00F0 >> 4) as u8,
@@ -770,7 +775,7 @@ impl Chip8 {
                     match op & 0x00FF {
                         0x9E => Instruction::SkipIfKey(vreg, SkipCmp::Eq),
                         0xA1 => Instruction::SkipIfKey(vreg, SkipCmp::Neq),
-                        _ => panic!("illegal instruction: 0x{:X}", op),
+                        _ => panic!("illegal instruction: {:X}", op),
                     }
                 },
                 0xF => {
@@ -785,17 +790,17 @@ impl Chip8 {
                         0x33 => Instruction::StoreBCD(vreg),
                         0x55 => Instruction::StoreRegs(vreg),
                         0x65 => Instruction::LoadRegs(vreg),
-                        _ => panic!("illegal Instruction: 0x{:X}", op),
+                        _ => panic!("illegal Instruction: {:X}", op),
                     }
                 },
-                _   => panic!("illegal instruction: 0x{:X}", op),
+                _   => panic!("illegal instruction: {:X}", op),
             }
         }
     }
 
     fn dispatch(&mut self, insn: Instruction) {
         match insn {
-            Instruction::CallRca1802(_) => unimplemented!(),
+            Instruction::CallRca1802(_) => panic!("unimplemented op: {:?}", insn),
             Instruction::DispClear => self.screen.clear(),
             Instruction::Return => self.regs.pc = self.stack.pop(),
             Instruction::Goto(addr) => *self.regs.pc = addr,

@@ -1,0 +1,4 @@
+option binary
+
+loop:
+	jp loop
