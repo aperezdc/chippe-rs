@@ -419,23 +419,23 @@ impl IndexMut<u8> for Regs {
 
 
 bitflags! {
-    pub flags Keys: u16 {
-        const KEY_0 = 0b0000_0000_0000_0001,
-        const KEY_1 = 0b0000_0000_0000_0010,
-        const KEY_2 = 0b0000_0000_0000_0100,
-        const KEY_3 = 0b0000_0000_0000_1000,
-        const KEY_4 = 0b0000_0000_0001_0000,
-        const KEY_5 = 0b0000_0000_0010_0000,
-        const KEY_6 = 0b0000_0000_0100_0000,
-        const KEY_7 = 0b0000_0000_1000_0000,
-        const KEY_8 = 0b0000_0001_0000_0000,
-        const KEY_9 = 0b0000_0010_0000_0000,
-        const KEY_A = 0b0000_0100_0000_0000,
-        const KEY_B = 0b0000_1000_0000_0000,
-        const KEY_C = 0b0001_0000_0000_0000,
-        const KEY_D = 0b0010_0000_0000_0000,
-        const KEY_E = 0b0100_0000_0000_0000,
-        const KEY_F = 0b1000_0000_0000_0000,
+    pub struct Keys: u16 {
+        const KEY_0 = 0b0000_0000_0000_0001;
+        const KEY_1 = 0b0000_0000_0000_0010;
+        const KEY_2 = 0b0000_0000_0000_0100;
+        const KEY_3 = 0b0000_0000_0000_1000;
+        const KEY_4 = 0b0000_0000_0001_0000;
+        const KEY_5 = 0b0000_0000_0010_0000;
+        const KEY_6 = 0b0000_0000_0100_0000;
+        const KEY_7 = 0b0000_0000_1000_0000;
+        const KEY_8 = 0b0000_0001_0000_0000;
+        const KEY_9 = 0b0000_0010_0000_0000;
+        const KEY_A = 0b0000_0100_0000_0000;
+        const KEY_B = 0b0000_1000_0000_0000;
+        const KEY_C = 0b0001_0000_0000_0000;
+        const KEY_D = 0b0010_0000_0000_0000;
+        const KEY_E = 0b0100_0000_0000_0000;
+        const KEY_F = 0b1000_0000_0000_0000;
     }
 }
 
